@@ -33,10 +33,22 @@ class Control:
 		self.Kp, self.Kd, self.Ki = 0.5, 3.5, 0.1
 
 
-		self.reference_alt, self.alt_val = -4, 0
+		self.reference_alt, self.alt_val = -10, 0
 
 
+		# Slow
 		self.Kpx = 0.1
+
+		# Good Tracking
+		self.Kpx = 0.25
+
+		# Little agressive
+		#self.Kpx = 0.5
+
+		# Unstable
+		#self.Kpx = 3
+
+		self.Kix = 0.003
 
 		self.x_ref, self.x_val = 10, 0
 
@@ -50,8 +62,8 @@ class Control:
 
 		self.x, self.x_ref_l, self.time_stamps_x = [], [], []
 
-		# self.wind = airsim.Vector3r(-5, 0, 0)
-		# self.client.simSetWind(self.wind)
+		self.wind = airsim.Vector3r(-5, 0, 0)
+		self.client.simSetWind(self.wind)
 
 		self.fig = plt.gcf()
 		self.fig.show()
@@ -85,65 +97,6 @@ class Control:
 		self.velocity_control.join()
 
 
-	def PID_Control(self, iterations):
-
-		for i in range(iterations):
-
-			self.Sensor_Update()
-
-			self.error = self.reference_alt - self.uav_state.kinematics_estimated.position.z_val
-
-			if i > 0:
-
-				vz = self.Kp*(self.error) + self.Ki*(self.error_sum) + self.Kd*(self.error - self.prev_error)
-
-			else:
-
-				vz = self.Kp*(self.error)
-
-			self.error_sum += self.error
-
-			self.prev_error = self.error 
-
-			self.velocity_control = self.client.moveByVelocityAsync(0, 0, vz, 1)
-
-			self.velocity_control.join()
-
-			#self.reference_alt -= 1
-
-			self.reference_alt -= (self.count+1)
-
-			self.count += 0.2
-
-
-
-	def PD_Control(self, iterations):
-
-		for i in range(iterations):
-
-			self.Sensor_Update()
-
-			self.error = self.reference_alt - self.uav_state.kinematics_estimated.position.z_val
-
-			if i > 0:
-
-				vz = self.Kp*(self.error) + self.Kd*(self.error - self.prev_error)
-
-			else:
-
-				vz = self.Kp*(self.error)
-
-			self.prev_error = self.error 
-
-			self.velocity_control = self.client.moveByVelocityAsync(0, 0, vz, 1)
-
-			self.velocity_control.join()
-
-			self.reference_alt -= self.count
-
-			self.count += 0.2
-
-
 	def PI_Control(self, iterations):
 
 		for i in range(iterations):
@@ -152,27 +105,42 @@ class Control:
 
 			self.time_stamps_x.append(i)
 
-			self.error = self.reference_alt - self.uav_state.kinematics_estimated.position.z_val
+			self.error_z = self.reference_alt - self.uav_state.kinematics_estimated.position.z_val
 
-			if i > 0:
+			self.error_x = self.x_ref - self.uav_state.kinematics_estimated.position.x_val
 
-				vz = self.Kp*(self.error) + self.Ki*(self.error_sum)
+			vz = self.Kp*(self.error) + self.Ki*(self.error_sum)
 
-			else:
+			vx = self.Kpx*(self.error_x) + self.Kix*(self.error_sum_x)
 
-				vz = self.Kp*(self.error)
+			self.error_sum_x += self.error_x 
 
-			self.error_sum += self.error 
+			self.error_sum += self.error
 
-			self.velocity_control = self.client.moveByVelocityAsync(0, 0, vz, 1)
+			plt.plot(self.time_stamps_x, self.x_ref_l, color = 'green',  linewidth=2)
+
+			plt.plot(self.time_stamps_x, self.x, color = 'blue',  linewidth=2)
+
+			if i>0:
+
+				uav_pose.remove()
+
+			uav_pose = plt.scatter(self.time_stamps_x[-1],self.x[-1], 100, color = 'blue')
+
+			plt.xlim([0, iterations+5])
+			plt.ylim([0, self.x_ref+5])
+
+			plt.pause(0.001)
+
+			self.fig.canvas.draw()
+
+			self.velocity_control = self.client.moveByVelocityAsync(vx, 0, vz, 1)
 
 			self.velocity_control.join()
 
+			print(i)
+
 			#self.reference_alt -= 1
-
-			self.reference_alt -= (self.count+1)
-
-			self.count += 0.2
 
 
 
@@ -196,7 +164,9 @@ class Control:
 
 			if i>0:
 
-				uav_pop = uav_pose.pop(0)
+				uav_pose.remove()
+
+			uav_pose = plt.scatter(self.time_stamps_x[-1],self.x[-1], 100, color = 'blue')
 
 			plt.xlim([0, iterations+5])
 			plt.ylim([0, self.x_ref+5])
@@ -222,9 +192,9 @@ class Control:
 
 		#self.Open_Loop()
 
-		self.P_Control(iterations)
+		#self.P_Control(iterations)
 
-		#self.PI_Control(iterations)
+		self.PI_Control(iterations)
 
 		#self.PID_Control(iterations)
 
@@ -252,4 +222,4 @@ class Control:
 
 
 control = Control()
-control.main(20)
+control.main(25)
