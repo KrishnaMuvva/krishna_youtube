@@ -16,34 +16,36 @@ class Control:
 		self.uav_state = self.client.getMultirotorState()
 
 		# High Rise time
-		#self.Kp = 0.1
+		self.Kp = 0.1
 
 		# No oscillations
 		#self.Kp = 0.5
 
 		# Small Oscillations
-		self.Kp = 1
+		#self.Kp = 1
 
 		# Unstable System
 		#self.Kp = 5
 
 		# PI - Steady state error
-		self.Kp, self.Ki = 0.5, 0.1
+		#self.Kp, self.Ki = 0.5, 0.1
 
 		self.Kp, self.Kd, self.Ki = 0.5, 3.5, 0.1
+
+		self.Ki = 0
 
 
 		self.reference_alt, self.alt_val = -10, 0
 
 
 		# Slow
-		self.Kpx = 0.1
+		#self.Kpx = 0.1
 
 		# Good Tracking
-		self.Kpx = 0.25
+		#self.Kpx = 0.25
 
 		# Little agressive
-		#self.Kpx = 0.5
+		self.Kpx = 0.5
 
 		# Unstable
 		#self.Kpx = 3
@@ -52,7 +54,7 @@ class Control:
 
 		self.x_ref, self.x_val = 10, 0
 
-		self.error, self.prev_error, self.error_sum = 0, 0, 0
+		self.error_z, self.prev_error_z, self.error_sum_z = 0, 0, 0
 
 		self.error_x, self.prev_error_x, self.error_sum_x = 0, 0, 0
 
@@ -62,7 +64,7 @@ class Control:
 
 		self.x, self.x_ref_l, self.time_stamps_x = [], [], []
 
-		self.wind = airsim.Vector3r(-5, 0, 0)
+		self.wind = airsim.Vector3r(-4, 0, 0)
 		self.client.simSetWind(self.wind)
 
 		self.fig = plt.gcf()
@@ -109,13 +111,13 @@ class Control:
 
 			self.error_x = self.x_ref - self.uav_state.kinematics_estimated.position.x_val
 
-			vz = self.Kp*(self.error) + self.Ki*(self.error_sum)
+			vz = self.Kp*(self.error_z) + self.Ki*(self.error_sum_z)
 
 			vx = self.Kpx*(self.error_x) + self.Kix*(self.error_sum_x)
 
 			self.error_sum_x += self.error_x 
 
-			self.error_sum += self.error
+			self.error_sum_z += self.error_z
 
 			plt.plot(self.time_stamps_x, self.x_ref_l, color = 'green',  linewidth=2)
 
@@ -138,7 +140,7 @@ class Control:
 
 			self.velocity_control.join()
 
-			print(i)
+			print("Time step ", i)
 
 			#self.reference_alt -= 1
 
@@ -179,7 +181,7 @@ class Control:
 
 			self.velocity_control.join()
 
-			print(i)
+			print("Time step ", i)
 
 			#self.reference_alt -= 1
 
